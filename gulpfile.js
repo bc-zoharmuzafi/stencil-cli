@@ -93,6 +93,12 @@ function deployWebpack() {
         .on('error', logError);
 }
 
+function installNpmDependencies() {
+    return gulp.src('package.json')
+        .pipe(exec('npm install'), logError)
+        .on('error', logError);
+}
+
 function uninstallPrivateDependencies() {
     return gulp.src('package.json')
         .pipe(exec('npm run uninstall-private-dependencies'), logError)
@@ -100,7 +106,7 @@ function uninstallPrivateDependencies() {
 }
 
 function pushTask() {
-    return gulp.src(['package.json', 'CHANGELOG.md', 'server/plugins/stencil-editor/public/dist/app.js', 'server/plugins/stencil-editor/public/dist/ng-stencil-editor/css/ng-stencil-editor.min.css', 'server/plugins/stencil-editor/public/dist/stencil-preview-sdk.js'])
+    return gulp.src(['package.json', 'package-lock.json', 'CHANGELOG.md', 'server/plugins/stencil-editor/public/dist/app.js', 'server/plugins/stencil-editor/public/dist/ng-stencil-editor/css/ng-stencil-editor.min.css', 'server/plugins/stencil-editor/public/dist/stencil-preview-sdk.js'])
         // Add files
         .pipe(git.add())
         // Commit the changed version number
@@ -124,6 +130,7 @@ gulp.task('install-private-dependencies', installPrivateDependencies);
 gulp.task('bump', bumpTask);
 gulp.task('deploy-webpack', deployWebpack);
 gulp.task('changelog', (done) => changelog.changelogTask({}, done));
+gulp.task('npm-install', installNpmDependencies);
 gulp.task('uninstall-private-dependencies', uninstallPrivateDependencies);
 gulp.task('push', pushTask);
-gulp.task('release', gulp.series('install-private-dependencies', 'bump', 'deploy-webpack', 'changelog', 'uninstall-private-dependencies', 'push'));
+gulp.task('release', gulp.series('install-private-dependencies', 'bump', 'deploy-webpack', 'changelog', 'npm-install', 'uninstall-private-dependencies', 'push'));
