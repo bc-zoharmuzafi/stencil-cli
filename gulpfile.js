@@ -10,6 +10,8 @@ const git = require('gulp-git-streamed');
 const gulp = require('gulp');
 const gulpif = require('gulp-if');
 const gutil = require('gulp-util');
+const lockfileVersions = [1];
+const packageLock = require('./package-lock.json');
 const prompt = require('gulp-prompt');
 const semver = require('semver');
 
@@ -74,6 +76,8 @@ function bumpTask() {
             targetVersion = (res.type !== 'custom') ? semver.inc(currentVersion, res.type) : res['custom-version'];
             responses = res;
 
+            bumpPackageLock(targetVersion);
+
             return gulp.src('package.json')
                 // bump the version number in those files
                 .pipe(bump({ version: targetVersion }))
@@ -84,6 +88,21 @@ function bumpTask() {
                 // Fetch Remote Tags
                 .pipe(git.exec({ args: `fetch ${remote} --tags` }, logError));
         }))
+        .on('error', logError);
+}
+
+function bumpPackageLock(targetVersion) {
+    if (!lockfileVersions.includes(packageLock["lockfileVersion"])) {
+        throw new Error("check lockfileVersions in package-lock.json");
+    }
+    
+    return gulp.src('package-lock.json')
+        // bump the version number in those files
+        .pipe(bump({ version: targetVersion }))
+        // save it back to filesystem
+        .pipe(gulp.dest(process.cwd()))
+        // change last modified date
+        .pipe(exec('touch -c package.json'))
         .on('error', logError);
 }
 
@@ -100,7 +119,7 @@ function uninstallPrivateDependencies() {
 }
 
 function pushTask() {
-    return gulp.src(['package.json', 'CHANGELOG.md', 'server/plugins/stencil-editor/public/dist/app.js', 'server/plugins/stencil-editor/public/dist/ng-stencil-editor/css/ng-stencil-editor.min.css', 'server/plugins/stencil-editor/public/dist/stencil-preview-sdk.js'])
+    return gulp.src(['package.json', 'package-lock.json', 'CHANGELOG.md', 'server/plugins/stencil-editor/public/dist/app.js', 'server/plugins/stencil-editor/public/dist/ng-stencil-editor/css/ng-stencil-editor.min.css', 'server/plugins/stencil-editor/public/dist/stencil-preview-sdk.js'])
         // Add files
         .pipe(git.add())
         // Commit the changed version number
