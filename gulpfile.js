@@ -97,7 +97,12 @@ function bumpPackageLock(targetVersion) {
     }
     
     return gulp.src('package-lock.json')
+        // bump the version number in those files
         .pipe(bump({ version: targetVersion }))
+        // save it back to filesystem
+        .pipe(gulp.dest(process.cwd()))
+        // change last modified date
+        .pipe(exec('touch -c package.json'))
         .on('error', logError);
 }
 
