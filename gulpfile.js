@@ -10,6 +10,8 @@ const git = require('gulp-git-streamed');
 const gulp = require('gulp');
 const gulpif = require('gulp-if');
 const gutil = require('gulp-util');
+const lockfileVersions = [1];
+const packageLock = require('./package-lock.json');
 const prompt = require('gulp-prompt');
 const semver = require('semver');
 
@@ -74,6 +76,8 @@ function bumpTask() {
             targetVersion = (res.type !== 'custom') ? semver.inc(currentVersion, res.type) : res['custom-version'];
             responses = res;
 
+            bumpPackageLock(targetVersion);
+
             return gulp.src('package.json')
                 // bump the version number in those files
                 .pipe(bump({ version: targetVersion }))
@@ -87,15 +91,19 @@ function bumpTask() {
         .on('error', logError);
 }
 
-function deployWebpack() {
-    return gulp.src('package.json')
-        .pipe(exec('npm run deploy'), logError)
+function bumpPackageLock(targetVersion) {
+    if (!lockfileVersions.includes(packageLock["lockfileVersion"])) {
+        throw new Error("check lockfileVersions in package-lock.json");
+    }
+    
+    return gulp.src('package-lock.json')
+        .pipe(bump({ version: targetVersion }))
         .on('error', logError);
 }
 
-function installNpmDependencies() {
+function deployWebpack() {
     return gulp.src('package.json')
-        .pipe(exec('npm install'), logError)
+        .pipe(exec('npm run deploy'), logError)
         .on('error', logError);
 }
 
@@ -130,7 +138,6 @@ gulp.task('install-private-dependencies', installPrivateDependencies);
 gulp.task('bump', bumpTask);
 gulp.task('deploy-webpack', deployWebpack);
 gulp.task('changelog', (done) => changelog.changelogTask({}, done));
-gulp.task('npm-install', installNpmDependencies);
 gulp.task('uninstall-private-dependencies', uninstallPrivateDependencies);
 gulp.task('push', pushTask);
-gulp.task('release', gulp.series('install-private-dependencies', 'bump', 'deploy-webpack', 'changelog', 'npm-install', 'uninstall-private-dependencies', 'push'));
+gulp.task('release', gulp.series('install-private-dependencies', 'bump', 'deploy-webpack', 'changelog', 'uninstall-private-dependencies', 'push'));
